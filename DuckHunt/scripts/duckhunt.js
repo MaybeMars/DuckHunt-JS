@@ -56,6 +56,8 @@ var theGame={
 	flyAwayProg:false,
 	waitingLevel:0,
 	dogTimer:0,
+	reloading:false,
+	shootingMode:"rifle",
 	init: function(){
 		$(theGame.playfield).html("");
 		
@@ -241,7 +243,22 @@ var theGame={
 		$("#ammo").html("<strong>Shots: </strong>"+bulletsText);
 		
 	},
-	shootGun: function(){
+	shootGun: function(e){
+		if(!theGame.reloading){
+		var shotX = (e.pageX-$("#gameField").attr("offsetLeft"));
+		var shotY = (e.pageY-$("#gameField").attr("offsetTop"));
+		
+		
+		if(theGame.shootingMode == "shotgun"){
+			theGame.shotgun(shotX,shotY);
+		}
+		if(theGame.shootingMode == "canon"){
+			theGame.canon(shotX,shotY);
+		}
+		if(theGame.shootingMode == "machineGun"){
+			theGame.machineGun();
+		}
+		
 		theGame.shotsTaken++;
 		theGame.shotsThisWave++;
 		theGame.flashScreen();
@@ -258,11 +275,96 @@ var theGame={
 			//you're out of bullets and there are still beasts!
 			theGame.outOfAmmo();	
 		}
+		}//reloading check end
 	},
-	shootDuck: function(obj){
+	shotgun:function(x,y){
+	//fire the shotgun
+			var choke = 100;
+			var curLeft = x;
+			var curTop = y;
+			var reloadTime = 500;
+			var upperL = curLeft+choke;
+			var lowerL = curLeft-choke;
+			var upperT = curTop + choke;
+			var lowerT = curTop -choke;
+			
+			$(".ducks").each(function(){
+				var thisLeft = parseInt($(this).css("left").replace("px"," "));
+				var thisTop = parseInt($(this).css("top").replace("px"," "));
+	
+				//console.log("THIS: "+thisLeft+" "+thisTop+"    THAT: "+curLeft+" "+curTop+"   choke: "+lowerL+" "+upperL+" / "+lowerT+" "+upperT);
+
+				if((thisLeft > lowerL && thisLeft < upperL && thisTop > lowerT && thisTop < upperT)){
+					//console.log("THIS: "+thisLeft+" "+thisTop+" BOOM");
+					theGame.killDuck($(this));
+
+				}
+				
+			});
+			//reload the shotgun
+			theGame.reloading = true;
+			setTimeout(function(){
+				theGame.reloading = false;
+			},reloadTime);
+		
+	},
+	canon:function(x,y){
+	//fire the canon (it's almost identical to the shotgun with a bigger range)
+			var choke = 175;
+			var curLeft = x;
+			var reloadTime = 2000;
+			var curTop = y;
+			var upperL = curLeft+choke;
+			var lowerL = curLeft-choke;
+			var upperT = curTop + choke;
+			var lowerT = curTop -choke;
+			
+			$(".ducks").each(function(){
+				var thisLeft = parseInt($(this).css("left").replace("px"," "));
+				var thisTop = parseInt($(this).css("top").replace("px"," "));
+	
+				//console.log("THIS: "+thisLeft+" "+thisTop+"    THAT: "+curLeft+" "+curTop+"   choke: "+lowerL+" "+upperL+" / "+lowerT+" "+upperT);
+
+				if((thisLeft > lowerL && thisLeft < upperL && thisTop > lowerT && thisTop < upperT)){
+					//console.log("THIS: "+thisLeft+" "+thisTop+" BOOM");
+					//the canon just obliterates the ducks no spin death they just fade away
+					theGame.oblDuck($(this));
+
+				}
+				
+			});
+			
+			//canons need to be reloaded
+			theGame.reloading = true;
+			setTimeout(function(){
+				theGame.reloading = false;
+			},reloadTime);
+	},
+	machineGun:function(){
+	
+		$(".ducks").each(function(){
+			$(this).bind("mouseover",function(){
+				theGame.oblDuck($(this));
+			});
+		});	
+		
+		setTimeout(theGame.reloadMachineGun,3000);
+	},
+	reloadMachineGun:function(){
+		theGame.reloading = true;
+		$(".ducks").each(function(){
+			$(this).unbind("mouseover");
+		});	
+		setTimeout(function(){
+				theGame.reloading = false;
+		},4000);
+	},
+	oblDuck:function(obj){
+	//obliterate the duck
 		theGame.ducksAlive--;
 		theGame.ducksDead++;
 		theGame.killsThisLevel++;
+		
 		$("#ducksKilled").append("<img src='images/duckDead.png'/>");
 		$._spritely.instances[$(obj).attr("id")].stop_random=true;
 		$(obj).stop(true,false);
@@ -274,13 +376,42 @@ var theGame={
 		$(obj).spStop(true);
 		$(obj).spState(5);
 		
-		document.getElementById("quak").play();
-
-      	if(theGame.ducksAlive == 0){
+		if(theGame.ducksAlive == 0){
     		document.getElementById("quacking").pause();
       		clearInterval(theGame.quackID);	
       	}
+      	
       	setTimeout(function(){
+        $(obj).animate({
+			opacity:'0'
+		},200,function(){
+			$(obj).destroy();
+			$(obj).attr("class","deadDuck");
+		});
+      	},200);
+	},
+	killDuck:function(obj){
+		theGame.ducksAlive--;
+		theGame.ducksDead++;
+		theGame.killsThisLevel++;
+		
+		$("#ducksKilled").append("<img src='images/duckDead.png'/>");
+		$._spritely.instances[$(obj).attr("id")].stop_random=true;
+		$(obj).stop(true,false);
+			$(obj).unbind();
+			$(obj).addClass("deadSpin");
+		theGame.updateScore(theGame.pointsPerDuck);
+	
+      	
+		$(obj).spStop(true);
+		$(obj).spState(5);
+		
+		if(theGame.ducksAlive == 0){
+    		document.getElementById("quacking").pause();
+      		clearInterval(theGame.quackID);	
+      	}
+      	
+      		setTimeout(function(){
         $(obj).spState(6);
 		$(obj).spStart();
 		$(obj).animate({
@@ -292,8 +423,18 @@ var theGame={
 			theGame.dogPopUp();
 		});
       	},500);
+      	
+      	
+		
+	},
+	shootDuck: function(obj){
 	
-		  
+	
+	if(theGame.shootingMode == "riffle"){
+		
+		document.getElementById("quak").play();
+		killDuck(obj);
+	}	  
 	},
 	dogPopUp: function(){
 		if(	!theGame.flyAwayProg){
