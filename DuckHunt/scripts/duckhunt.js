@@ -248,7 +248,6 @@ var theGame={
 		var shotX = (e.pageX-$("#gameField").attr("offsetLeft"));
 		var shotY = (e.pageY-$("#gameField").attr("offsetTop"));
 		
-		
 		if(theGame.shootingMode == "shotgun"){
 			theGame.shotgun(shotX,shotY);
 		}
@@ -429,11 +428,9 @@ var theGame={
 	},
 	shootDuck: function(obj){
 	
-	
-	if(theGame.shootingMode == "riffle"){
-		
+	if(theGame.shootingMode == "rifle"){
 		document.getElementById("quak").play();
-		killDuck(obj);
+		theGame.killDuck(obj);
 	}	  
 	},
 	dogPopUp: function(){
